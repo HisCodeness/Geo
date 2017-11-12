@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Xml;
 using Geo.Abstractions.Interfaces;
 using Geo.Geometries;
 using Geo.Gps.Serialization.Xml;
 using Geo.Gps.Serialization.Xml.Gpx.Gpx11;
-using System.Xml;
 
 namespace Geo.Gps.Serialization
 {
@@ -21,13 +21,14 @@ namespace Geo.Gps.Serialization
                     };
             }
         }
-        
+
         public override GpsFeatures SupportedFeatures
         {
             get { return GpsFeatures.All; }
         }
 
-        protected override bool CanDeSerialize(XmlReader xml) {
+        protected override bool CanDeSerialize(XmlReader xml)
+        {
             return xml.NamespaceURI == "http://www.topografix.com/GPX/1/1";
         }
 
@@ -112,12 +113,12 @@ namespace Geo.Gps.Serialization
                     gpx.metadata = new GpxMetadata();
                 if (gpx.metadata.author == null)
                     gpx.metadata.author = new GpxPerson();
-                var parts = s.Split(new[] {'@'});
+                var parts = s.Split(new[] { '@' });
                 gpx.metadata.author.email = new GpxEmail
-                    {
-                        id = parts[0],
-                        domain = parts[1],
-                    };
+                {
+                    id = parts[0],
+                    domain = parts[1],
+                };
             });
 
             SerializeMetadata(data, xml, x => x.Author.Link, (gpx, s) =>
@@ -144,7 +145,8 @@ namespace Geo.Gps.Serialization
             {
                 lat = (decimal)waypoint.Coordinate.Latitude,
                 lon = (decimal)waypoint.Coordinate.Longitude,
-                ele = waypoint.Coordinate.Is3D ? 0m : (decimal) ((Is3D)waypoint.Coordinate).Elevation
+                ele = waypoint.Coordinate.Is3D ? (decimal)((Is3D)waypoint.Coordinate).Elevation : 0m,
+                eleSpecified = waypoint.Coordinate.Is3D
             });
         }
 
@@ -169,7 +171,10 @@ namespace Geo.Gps.Serialization
                         {
                             lat = (decimal)segment.Fixes[j].Coordinate.Latitude,
                             lon = (decimal)segment.Fixes[j].Coordinate.Longitude,
-                            ele = segment.Fixes[j].Coordinate.Is3D ? (decimal) ((Is3D)segment.Fixes[j].Coordinate).Elevation : 0m
+                            ele = segment.Fixes[j].Coordinate.Is3D ? (decimal)((Is3D)segment.Fixes[j].Coordinate).Elevation : 0m,
+                            time = segment.Fixes[j].TimeUtc,
+                            timeSpecified = segment.Fixes[j].TimeUtc != default(DateTime),
+                            eleSpecified = segment.Fixes[j].Coordinate.Is3D
                         };
                     }
                     trk.trkseg[i] = new GpxTrackSegment { trkpt = pts };
@@ -196,7 +201,8 @@ namespace Geo.Gps.Serialization
                     {
                         lat = (decimal)route.Coordinates[j].Latitude,
                         lon = (decimal)route.Coordinates[j].Longitude,
-                        ele = route.Coordinates[j].Is3D ? (decimal) ((Is3D)route.Coordinates[j]).Elevation : 0m
+                        ele = route.Coordinates[j].Is3D ? (decimal)((Is3D)route.Coordinates[j]).Elevation : 0m,
+                        eleSpecified = route.Coordinates[j].Is3D
                     };
                 }
                 yield return rte;
@@ -215,7 +221,7 @@ namespace Geo.Gps.Serialization
                 if (xml.metadata.link != null && xml.metadata.link.Length > 0)
                     data.Metadata.Attribute(x => x.Link, xml.metadata.link[0].href);
 
-                if (xml.metadata.author !=null)
+                if (xml.metadata.author != null)
                 {
                     data.Metadata.Attribute(x => x.Author.Name, xml.metadata.author.name);
                     if (xml.metadata.author.email != null)
@@ -224,7 +230,7 @@ namespace Geo.Gps.Serialization
                         data.Metadata.Attribute(x => x.Author.Link, xml.metadata.author.link.href);
                 }
 
-                if (xml.metadata.copyright !=null)
+                if (xml.metadata.copyright != null)
                 {
                     data.Metadata.Attribute(x => x.Copyright.Author, xml.metadata.copyright.author);
                     data.Metadata.Attribute(x => x.Copyright.License, xml.metadata.copyright.license);
@@ -244,7 +250,7 @@ namespace Geo.Gps.Serialization
                     track.Metadata.Attribute(x => x.Description, trkType.desc);
                     track.Metadata.Attribute(x => x.Comment, trkType.cmt);
 
-					foreach (var trksegType in trkType.trkseg.Where(seg => seg.trkpt != null))
+                    foreach (var trksegType in trkType.trkseg.Where(seg => seg.trkpt != null))
                     {
                         var segment = new TrackSegment();
                         foreach (var wptType in trksegType.trkpt)

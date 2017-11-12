@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Xml;
 using Geo.Abstractions.Interfaces;
 using Geo.Geometries;
 using Geo.Gps.Serialization.Xml;
 using Geo.Gps.Serialization.Xml.Gpx.Gpx10;
-using System.Xml;
 
 namespace Geo.Gps.Serialization
 {
@@ -21,13 +21,14 @@ namespace Geo.Gps.Serialization
                     };
             }
         }
-        
+
         public override GpsFeatures SupportedFeatures
         {
             get { return GpsFeatures.All; }
         }
 
-        protected override bool CanDeSerialize(XmlReader xml) {
+        protected override bool CanDeSerialize(XmlReader xml)
+        {
             return xml.NamespaceURI == "http://www.topografix.com/GPX/1/0";
         }
 
@@ -62,11 +63,11 @@ namespace Geo.Gps.Serialization
         private IEnumerable<GpxPoint> SerializeWaypoints(GpsData data)
         {
             return data.Waypoints.Select(waypoint => new GpxPoint
-                {
-                    lat = (decimal)waypoint.Coordinate.Latitude,
-                    lon = (decimal)waypoint.Coordinate.Longitude,
-                    ele = waypoint.Coordinate.Is3D ? 0m : (decimal) ((Is3D)waypoint.Coordinate).Elevation
-                });
+            {
+                lat = (decimal)waypoint.Coordinate.Latitude,
+                lon = (decimal)waypoint.Coordinate.Longitude,
+                ele = waypoint.Coordinate.Is3D ? (decimal)((Is3D)waypoint.Coordinate).Elevation : 0m
+            });
         }
 
         private IEnumerable<GpxTrack> SerializeTracks(GpsData data)
@@ -90,7 +91,10 @@ namespace Geo.Gps.Serialization
                         {
                             lat = (decimal)segment.Fixes[j].Coordinate.Latitude,
                             lon = (decimal)segment.Fixes[j].Coordinate.Longitude,
-                            ele = segment.Fixes[j].Coordinate.Is3D ? 0m : (decimal) ((Is3D)segment.Fixes[j].Coordinate).Elevation
+                            ele = segment.Fixes[j].Coordinate.Is3D ? (decimal)((Is3D)segment.Fixes[j].Coordinate).Elevation : 0m,
+                            time = segment.Fixes[j].TimeUtc,
+                            timeSpecified = segment.Fixes[j].TimeUtc != default(DateTime),
+                            eleSpecified = segment.Fixes[j].Coordinate.Is3D
                         };
                     }
                     trk.trkseg[i] = new GpxTrackSegment { trkpt = pts };
@@ -117,7 +121,7 @@ namespace Geo.Gps.Serialization
                     {
                         lat = (decimal)route.Coordinates[j].Latitude,
                         lon = (decimal)route.Coordinates[j].Longitude,
-                        ele = route.Coordinates[j].Is3D ? 0m : (decimal) ((Is3D)route.Coordinates[j]).Elevation
+                        ele = route.Coordinates[j].Is3D ? (decimal)((Is3D)route.Coordinates[j]).Elevation : 0m
                     };
                 }
                 yield return rte;
@@ -146,8 +150,8 @@ namespace Geo.Gps.Serialization
                     track.Metadata.Attribute(x => x.Name, trkType.name);
                     track.Metadata.Attribute(x => x.Description, trkType.desc);
                     track.Metadata.Attribute(x => x.Comment, trkType.cmt);
-                
-					foreach (var trksegTrkpt in trkType.trkseg.Where(seg => seg.trkpt != null))
+
+                    foreach (var trksegTrkpt in trkType.trkseg.Where(seg => seg.trkpt != null))
                     {
                         var segment = new TrackSegment();
                         foreach (var wptType in trksegTrkpt.trkpt)

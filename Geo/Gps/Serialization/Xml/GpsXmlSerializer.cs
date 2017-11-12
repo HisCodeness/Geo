@@ -13,7 +13,7 @@ namespace Geo.Gps.Serialization.Xml
 
         public string Serialize(GpsData data)
         {
-            var textWriter = new StringWriter();
+            var textWriter = new StringWriterUtf8();
             _xmlSerializer.Serialize(textWriter, SerializeInternal(data));
             return textWriter.ToString();
         }
